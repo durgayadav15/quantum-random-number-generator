@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Random Number Generator</title>
+<style>
+  :root {
+    --bg: #000000;
+    --panel: #07070a;
+    --panel-2: #0b0b10;
+    --text: #f6eaff;
+    --muted: #9a86a8;
+    --accent: #b84dff;
+    --accent-2: #ff3df2;
+    --zero: #e0b3ff;
+    --one: #ff4dd2;
+    --border: #b84dff55;
+    --glow: 0 0 6px #b84dff88, 0 0 18px #b84dff44;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1000px 500px at 85% -10%, #b84dff14 0%, transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, #ff3df214 0%, transparent 55%),
+                var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 1.9rem;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 8px #b84dff88) drop-shadow(0 0 16px #ff3df244);
+  }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 0 0 1px #b84dff22, 0 0 22px #b84dff22, inset 0 0 18px #b84dff0d;
+  }
+  .card h2 { text-shadow: 0 0 8px #b84dff66; color: var(--accent); }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 10px; background: #000; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 4px; }
+  select, input[type=number] {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: #000; color: var(--text); font-size: 1rem;
+  }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  button {
+    cursor: pointer; border: 0; border-radius: 12px; padding: 12px 18px; font-size: 1rem; font-weight: 600;
+    color: #fff; background: linear-gradient(90deg, #8a2be2, #c21fd1);
+    text-shadow: 0 0 6px #000;
+    box-shadow: 0 0 14px #b84dff66, 0 0 26px #ff3df244;
+    transition: transform .08s ease, filter .15s ease, box-shadow .15s ease;
+  }
+  button:hover { filter: brightness(1.2); box-shadow: 0 0 20px #b84dffaa, 0 0 38px #ff3df288; }
+  button:active { transform: scale(.97); }
+  button.secondary { background: #000; color: var(--accent); border: 1px solid var(--accent); box-shadow: 0 0 10px #b84dff55, inset 0 0 8px #b84dff22; text-shadow: 0 0 6px #b84dff; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  .actions button { flex: 1; }
+  .result {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 2.4rem; text-align: center; padding: 18px 8px; margin: 6px 0 4px;
+    color: #e0b3ff; text-shadow: 0 0 8px #e0b3ff, 0 0 22px #e0b3ff99;
+    background: #000; border-radius: 12px; border: 1px solid #e0b3ff88;
+    box-shadow: 0 0 14px #e0b3ff44, inset 0 0 14px #e0b3ff22;
+    word-break: break-all; min-height: 84px;
+  }
+  .bits { font-family: ui-monospace, Consolas, monospace; font-size: .95rem; word-break: break-all; line-height: 1.6; max-height: 120px; overflow: auto; }
+  .b0 { color: var(--zero); text-shadow: 0 0 6px var(--zero); }
+  .b1 { color: var(--one); text-shadow: 0 0 6px var(--one); }
+  .stat b { text-shadow: 0 0 8px currentColor; }
+  .circuit { text-shadow: 0 0 8px #b84dff; }
+  .bar { box-shadow: 0 0 10px #ff4dd266; }
+  .bar > div { box-shadow: 0 0 10px #e0b3ff; }
+  select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px #b84dff88; }
+  code { color: var(--accent-2); }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+  .stat { background: #000; border: 1px solid #b84dff33; border-radius: 10px; padding: 10px; }
+  .stat small { display: block; color: var(--muted); font-size: .75rem; }
+  .stat b { font-size: 1.1rem; }
+  .bar { height: 10px; border-radius: 6px; background: var(--one); overflow: hidden; margin-top: 10px; }
+  .bar > div { height: 100%; background: var(--zero); width: 50%; transition: width .3s; }
+  .note { margin-top: 20px; font-size: .82rem; color: var(--muted); line-height: 1.5; }
+  .full { grid-column: 1 / -1; }
+  .circuit { font-family: ui-monospace, Consolas, monospace; color: var(--accent); text-align: center; padding: 6px 0 2px; font-size: .95rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚛ Quantum Random Number Generator</h1>
+  <p class="sub">Simulates preparing a qubit in |0⟩, applying a Hadamard gate, and measuring it — each measurement is one random bit.</p>
+
+  <div class="grid">
+    <!-- Qubit visualisation -->
+    <div class="card">
+      <h2>Qubit State (Bloch sphere)</h2>
+      <canvas id="bloch" width="420" height="320"></canvas>
+      <div class="circuit">|0⟩ ──[ H ]──[ Measure ]── bit</div>
+      <div class="stats">
+        <div class="stat"><small>P(0) = |α|²</small><b id="p0">100%</b></div>
+        <div class="stat"><small>P(1) = |β|²</small><b id="p1">0%</b></div>
+      </div>
+    </div>
+
+    <!-- Controls + output -->
+    <div class="card">
+      <h2>Generate</h2>
+      <label for="mode">Output type</label>
+      <select id="mode">
+        <option value="int">Integer in a range</option>
+        <option value="bits">Raw bits</option>
+        <option value="hex">Hexadecimal</option>
+        <option value="dice">Dice roll (d6)</option>
+        <option value="coin">Coin flip</option>
+      </select>
+
+      <div id="rangeBox" class="row">
+        <div><label for="min">Min</label><input type="number" id="min" value="1"></div>
+        <div><label for="max">Max</label><input type="number" id="max" value="100"></div>
+      </div>
+      <div id="lenBox" style="display:none">
+        <label for="len">Number of bits / hex digits</label>
+        <input type="number" id="len" value="32" min="1" max="4096">
+      </div>
+
+      <div class="actions">
+        <button id="go">Measure qubits</button>
+        <button id="copy" class="secondary">Copy</button>
+      </div>
+      <div class="result" id="result">—</div>
+    </div>
+
+    <!-- Bits + stats -->
+    <div class="card full">
+      <h2>Measurement Record</h2>
+      <div class="bits" id="bits">No measurements yet.</div>
+      <div class="bar"><div id="bar"></div></div>
+      <div class="stats" style="grid-template-columns: repeat(4,1fr)">
+        <div class="stat"><small>Total bits</small><b id="total">0</b></div>
+        <div class="stat"><small>Zeros</small><b id="zeros" class="b0">0</b></div>
+        <div class="stat"><small>Ones</small><b id="ones" class="b1">0</b></div>
+        <div class="stat"><small>χ² (1 d.f.)</small><b id="chi">0.00</b></div>
+      </div>
+      <div class="actions"><button id="reset" class="secondary">Reset statistics</button></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <b>How it works:</b> a qubit in state α|0⟩ + β|1⟩ is simulated as a 2-element complex state vector.
+    A Hadamard gate takes |0⟩ to (|0⟩ + |1⟩)/√2, and a measurement collapses it to 0 or 1 with probability |α|² and |β|² (the Born rule).<br>
+    <b>Honest caveat:</b> this runs on a classical computer, so the "collapse" is decided by the browser's
+    cryptographically secure generator (<code>crypto.getRandomValues</code>). It is an educational simulation, not true
+    quantum randomness. For genuinely quantum randomness you need physical hardware (e.g. photon-based QRNG services).
+    χ² below 3.84 means the 0/1 balance is consistent with a fair source at the 95% level.
+  </p>
+</div>
+
+<script>
+(() => {
+  // ---------- Tiny quantum simulator ----------
+  const SQRT1_2 = Math.SQRT1_2;
+  // State vector [[re, im], [re, im]] for amplitudes of |0> and |1>
+  const ket0 = () => [[1, 0], [0, 0]];
+  const hadamard = ([a, b]) => [
+    [SQRT1_2 * (a[0] + b[0]), SQRT1_2 * (a[1] + b[1])],
+    [SQRT1_2 * (a[0] - b[0]), SQRT1_2 * (a[1] - b[1])]
+  ];
+  const prob = ([a, b]) => {
+    const p0 = a[0] * a[0] + a[1] * a[1];
+    const p1 = b[0] * b[0] + b[1] * b[1];
+    return [p0, p1];
+  };
+
+  // Uniform float in [0,1) using 32 secure random bits
+  const rand01 = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+
+  // Prepare |0>, apply H, measure -> one bit (Born rule)
+  function measureQubit() {
+    let state = ket0();
+    state = hadamard(state);
+    const [p0] = prob(state);
+    return rand01() < p0 ? 0 : 1;
+  }
+
+  const measureBits = n => Array.from({ length: n }, measureQubit);
+
+  // ---------- Helpers to turn bits into values ----------
+  function bitsToBigInt(bits) {
+    let v = 0n;
+    for (const b of bits) v = (v << 1n) | BigInt(b);
+    return v;
+  }
+
+  // Unbiased integer in [min, max] via rejection sampling
+  function randomInt(min, max) {
+    const range = BigInt(max - min + 1);
+    const nBits = Math.max(1, range.toString(2).length);
+    while (true) {
+      const bits = measureBits(nBits);
+      record(bits);
+      const v = bitsToBigInt(bits);
+      if (v < range) return Number(v) + min;
+    }
+  }
+
+  // ---------- Statistics ----------
+  let zeros = 0, ones = 0;
+  let history = [];
+  const $ = id => document.getElementById(id);
+
+  function record(bits) {
+    for (const b of bits) { b ? ones++ : zeros++; }
+    history.push(...bits);
+    if (history.length > 512) history = history.slice(-512);
+  }
+
+  function renderStats() {
+    const total = zeros + ones;
+    $('total').textContent = total;
+    $('zeros').textContent = zeros;
+    $('ones').textContent = ones;
+    const exp = total / 2;
+    const chi = total ? (((zeros - exp) ** 2) + ((ones - exp) ** 2)) / exp : 0;
+    $('chi').textContent = chi.toFixed(2);
+    $('bar').style.width = total ? (zeros / total * 100) + '%' : '50%';
+    $('bits').innerHTML = history.length
+      ? history.map(b => `<span class="b${b}">${b}</span>`).join('')
+      : 'No measurements yet.';
+    const el = $('bits'); el.scrollTop = el.scrollHeight;
+  }
+
+  // ---------- Bloch sphere drawing ----------
+  const canvas = $('bloch'), ctx = canvas.getContext('2d');
+  let angle = 0;       // rotation for animation
+  let theta = 0;       // polar angle of the state (0 = |0>, PI/2 = |+>)
+  let targetTheta = 0;
+  let flash = 0;       // measurement flash intensity
+  let collapsed = null;
+
+  function drawBloch() {
+    const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2, R = 110;
+    ctx.clearRect(0, 0, W, H);
+
+    // sphere outline
+    ctx.strokeStyle = '#b84dff'; ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#b84dff'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+    // meridian
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.ellipse(cx, cy, R * Math.abs(Math.cos(angle)), R, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // axis
+    ctx.strokeStyle = '#ff3df2'; ctx.shadowColor = '#ff3df2';
+    ctx.beginPath(); ctx.moveTo(cx, cy - R - 16); ctx.lineTo(cx, cy + R + 16); ctx.stroke();
+    ctx.shadowColor = '#e0b3ff';
+    ctx.fillStyle = '#e0b3ff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('|0⟩', cx, cy - R - 22);
+    ctx.shadowColor = '#ff4dd2';
+    ctx.fillStyle = '#ff4dd2';
+    ctx.fillText('|1⟩', cx, cy + R + 32);
+
+    // state vector: polar angle theta from +z, azimuth = angle (spins for effect)
+    const vx = Math.sin(theta) * Math.cos(angle);
+    const vy = Math.sin(theta) * Math.sin(angle);
+    const vz = Math.cos(theta);
+    const px = cx + R * vx;
+    const py = cy - R * vz + R * 0.3 * vy;
+
+    const color = collapsed === 1 ? '#ff4dd2' : collapsed === 0 ? '#e0b3ff' : '#b84dff';
+    ctx.strokeStyle = color; ctx.lineWidth = 3;
+    ctx.shadowColor = color; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+
+    // glow tip
+    const g = ctx.createRadialGradient(px, py, 0, px, py, 18 + flash * 30);
+    g.addColorStop(0, color); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(px, py, 18 + flash * 30, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function loop() {
+    angle += 0.03;
+    theta += (targetTheta - theta) * 0.12;
+    flash *= 0.92;
+    drawBloch();
+    requestAnimationFrame(loop);
+  }
+
+  function animateMeasurement(lastBit) {
+    // Hadamard puts the state on the equator, then measurement snaps it to a pole
+    theta = Math.PI / 2; flash = 1; collapsed = lastBit;
+    targetTheta = lastBit === 0 ? 0 : Math.PI;
+    setTimeout(() => { collapsed = null; targetTheta = 0; }, 900);
+  }
+
+  // ---------- UI ----------
+  let lastText = '';
+
+  function generate() {
+    const mode = $('mode').value;
+    let out = '';
+    const before = history.length;
+
+    if (mode === 'int') {
+      let min = parseInt($('min').value, 10), max = parseInt($('max').value, 10);
+      if (Number.isNaN(min) || Number.isNaN(max)) { out = 'Enter valid numbers'; }
+      else {
+        if (min > max) [min, max] = [max, min];
+        if (max - min > 2 ** 30) { out = 'Range too large'; }
+        else out = String(randomInt(min, max));
+      }
+    } else if (mode === 'bits') {
+      const n = Math.min(4096, Math.max(1, parseInt($('len').value, 10) || 1));
+      const bits = measureBits(n); record(bits);
+      out = bits.join('');
+    } else if (mode === 'hex') {
+      const n = Math.min(1024, Math.max(1, parseInt($('len').value, 10) || 1));
+      const bits = measureBits(n * 4); record(bits);
+      let s = '';
+      for (let i = 0; i < bits.length; i += 4)
+        s += (bits[i] * 8 + bits[i + 1] * 4 + bits[i + 2] * 2 + bits[i + 3]).toString(16);
+      out = s.toUpperCase();
+    } else if (mode === 'dice') {
+      out = '🎲 ' + randomInt(1, 6);
+    } else if (mode === 'coin') {
+      const b = measureQubit(); record([b]);
+      out = b ? 'Tails' : 'Heads';
+    }
+
+    lastText = out.replace(/^🎲 /, '');
+    const r = $('result');
+    r.textContent = out;
+    r.style.fontSize = out.length > 24 ? '1rem' : out.length > 12 ? '1.5rem' : '2.4rem';
+
+    const lastBit = history.length ? history[history.length - 1] : 0;
+    animateMeasurement(lastBit);
+    updateProbDisplay();
+    renderStats();
+  }
+
+  function updateProbDisplay() {
+    const [p0, p1] = prob(hadamard(ket0()));
+    $('p0').textContent = (p0 * 100).toFixed(1) + '%';
+    $('p1').textContent = (p1 * 100).toFixed(1) + '%';
+  }
+
+  function updateMode() {
+    const m = $('mode').value;
+    $('rangeBox').style.display = m === 'int' ? 'flex' : 'none';
+    $('lenBox').style.display = (m === 'bits' || m === 'hex') ? 'block' : 'none';
+    if (m === 'hex') $('len').value = 16; else if (m === 'bits') $('len').value = 32;
+  }
+
+  $('mode').addEventListener('change', updateMode);
+  $('go').addEventListener('click', generate);
+  $('copy').addEventListener('click', async () => {
+    if (!lastText) return;
+    try { await navigator.clipboard.writeText(lastText); $('copy').textContent = 'Copied!'; }
+    catch { $('copy').textContent = 'Copy failed'; }
+    setTimeout(() => $('copy').textContent = 'Copy', 1200);
+  });
+  $('reset').addEventListener('click', () => {
+    zeros = ones = 0; history = []; renderStats();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !['INPUT', 'SELECT'].includes(document.activeElement.tagName)) generate();
+  });
+
+  updateMode();
+  updateProbDisplay();
+  renderStats();
+  loop();
+})();
+</script>
+</body>
+</html>
