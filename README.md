@@ -32,6 +32,7 @@ The application runs directly in a web browser without requiring a backend serve
 quantum-random-number-generator/
 ├── index.html
 └── README.md
+└── QRNG results.pdf
 ```
 
 The entire application, including HTML, CSS, and JavaScript, is contained in a single `index.html` file.
