@@ -81,7 +81,7 @@ The randomness is classical unless the application is connected to a genuine qua
 - Display randomness statistics and visualizations.
 - Improve the user experience with additional animations and interactive elements.
 
-## Contributions
+## Contributers
 S20240010213 - Gopinath
 
 S20240010233 - Durga
